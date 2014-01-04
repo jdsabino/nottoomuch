@@ -2,7 +2,7 @@
 # -*- mode: shell-script; sh-basic-offset: 8; tab-width: 8 -*-
 #
 # Created: Sat 06 Jul 2013 20:08:27 EEST too
-# Last modified: Mon 16 Dec 2013 21:20:25 +0200 too
+# Last modified: Sat 04 Jan 2014 14:04:44 +0200 too
 
 set -eu
 #set -x # or enter /bin/sh -x ... on command line.
@@ -120,19 +120,20 @@ cmd_master () # set master to origin/master
 
 dfbranch ()
 {
-	git branch -r | sort | sed -n '/\/df-/ { s|.*origin/||p;q; }'
+	git branch -r | sort -r | sed -n '/\/df-/ { s|.*origin/||p;q; }'
 }
 
 cmd_dfpushtree () # push dogfood tree to df-yymm branch with new commit
 {
-	dfbranch=`dfbranch`
+	case $# in 1) dfbranch=`dfbranch` ;; 2) dfbranch="$2" ;;
+		*) usage ref-for-commit-msg '[df-branch]'
+	esac
+
 	case $dfbranch in
 		*' '*) die "df branch '$dfbranch' contains spaces" ;;
 		df-*) ;;
 		*) die "df branch '$dfbranch' does not start with df-"
 	esac
-
-	case $# in 1) ;; *) usage ref-for-commit-msg ;; esac
 
 	GIT_AUTHOR_DATE=`exec git log -1 --pretty=%at "$1"`
 	export GIT_AUTHOR_DATE
@@ -161,6 +162,7 @@ cmd_dfpushtree () # push dogfood tree to df-yymm branch with new commit
 	x git --no-pager diff $new_commit dogfood
 	yesno "execute 'git push origin \$new_commit:$dfbranch'"
 	x git push origin $new_commit:$dfbranch
+	echo git branch -f $dfbranch origin/$dfbranch '?'
 }
 
 cmd_tig () # tig --all
