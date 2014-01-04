@@ -3,7 +3,7 @@
 # $ startfetchmail.sh $
 #
 # Created: Wed 06 Mar 2013 17:17:58 EET too
-# Last modified: Sat 04 Jan 2014 14:44:29 +0200 too
+# Last modified: Sat 04 Jan 2014 16:21:38 +0200 too
 
 # Fetchmail does not offer an option to daemonize it after first authentication
 # is successful (and report if it failed). After 2 fragile attempts to capture
@@ -18,6 +18,9 @@ set -eu
 
 imap_server=mail.host.tld
 imap_user=username
+
+readonly imap_server imap_user
+
 
 warn () { echo "$@" >&2; }
 die () { echo "$@" >&2; exit 1; }
