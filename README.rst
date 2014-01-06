@@ -11,11 +11,18 @@ my personal “extensions” around notmuch mail indexer that are too specific
 to be added to http://notmuchmail.org/ wiki, with additional scripts
 that aren't feasible to be stored to the wiki.
 
+address completion:
+
 nottoomuch-addresses_
 selection-menu_
 
-software
---------
+mail delivery:
+
+startfetchmail_
+
+
+address completion
+------------------
 
 nottoomuch-addresses_
   the address completion provider i use to get list of email addresses
@@ -29,8 +36,17 @@ selection-menu_
 
 .. _selection-menu: selection-menu.rst
 
-branches
---------
+
+mail delivery
+-------------
+
+startfetchmail_
+
+.. _startfetchmail: startfetchmail.sh
+
+
+repository branches
+-------------------
 
 in addition to **master** branch i have **dogfood** branch where stuff
 may not be as polished as in **master**, and **df-yymm** branch(es) with
@@ -44,9 +60,9 @@ contributing
 
 i accept patches in links to commit id, as pull requests and as in
 patch emails provided by git-format-patch (and git-send-email).
-i probably cherry-pick / rebase your stuff instead of merging (and
-possivly do minor amends) so you have to manually close your pull
-requests if you've done any.
+i probably cherry-pick / rebase any stuff received instead of merging
+(and possibly do minor amends) so any pull requests made are to be
+manually closed.
 
 see also branches.txt_ for reasons tho choose **master** or **df-yymm**
 branch as a (re)base branch...
