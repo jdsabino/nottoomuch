@@ -3,7 +3,7 @@
 # $ startfetchmail.sh $
 #
 # Created: Wed 06 Mar 2013 17:17:58 EET too
-# Last modified: Sat 04 Jan 2014 16:21:38 +0200 too
+# Last modified: Mon 06 Jan 2014 12:14:03 +0200 too
 
 # Fetchmail does not offer an option to daemonize it after first authentication
 # is successful (and report if it failed). After 2 fragile attempts to capture
@@ -14,16 +14,38 @@
 set -eu
 #set -x
 
-# Edit the following 2 imap_* variables to contain your values.
+case $# in 4) ;; *) exec >&2
+	echo
+	echo Usage: $0 '(keep|nokeep)' imap_user imap_server mda_cmdline
+	echo
+	echo This script runs fetchmail with options to use IMAPS IDLE feature
+	echo when fetching email '(IMAPS always, IDLE when applicaple)'.
+	echo
+	echo fetchmail is run in background '(daemon mode)' and first 2 seconds
+	echo of logs is printed to terminal so that user can determine whether
+	echo authentication succeeded.
+	echo
+	echo Example:
+	echo
+	echo '  ' $0 keep $USER mailhost.example.org "'/usr/bin/procmail -d %T'"
+	echo
+	echo The above example delivers mail from imap server to user mbox
+	echo 'in spool directory (usually /var[/spool]/mail/$USER, or $MAIL).'
+	echo 'The mails are not removed from imap server'
+	echo
+	exit 1
+esac
 
-imap_server=mail.host.tld
-imap_user=username
+case $1 in keep) keep=keep ;; nokeep) keep= ;; *) exec >&2
+	echo
+	echo "$0: '$1' is not either 'keep' or 'nokeep'".
+	echo
+	exit 1
+esac
 
-readonly imap_server imap_user
-
-
-warn () { echo "$@" >&2; }
-die () { echo "$@" >&2; exit 1; }
+imap_user=$2 imap_server=$3 mda_cmdline=$4
+shift 4
+readonly keep imap_server imap_user mda_cmdline
 
 cd "$HOME"
 
@@ -49,13 +71,17 @@ then
 fi
 touch $logfile
 
-trap 'rm -f fmconf' 0
+tail -f $logfile &
+logfilepid=$!
+
+trap 'rm -f fmconf; kill $logfilepid' 0
+
 echo '
 set daemon 60
 set logfile '$logfile'
 
-poll '"$imap_server"' proto IMAP user "'"$imap_user"'" ssl keep idle
-  mda "/usr/bin/procmail -d %T"
+poll '"$imap_server"' proto IMAP user "'"$imap_user"'" ssl '$keep' idle
+  mda "'"$mda_cmdline"'"
 ' > fmconf
 chmod 700 fmconf
 
@@ -64,11 +90,14 @@ chmod 700 fmconf
 #x fetchmail -f /dev/null -k -v -p IMAP --ssl --idle -d 60 --logfile $logfile\
 #	-u USER --mda '/usr/bin/procmail -d %T' SERVER
 
-tail -f $logfile &
 sleep 2
-kill $!
+test -s $logfile || sleep 2
+rm -f $fmconf
+kill $logfilepid
+trap - 0
 echo
 ps x | grep '\<fetch[m]ail\>'
 echo
 echo "Above the end of current fetchmail log '$HOME/$logfile'"
-echo is shown. Check there that your startup was successful.
+echo "is shown. Check there that your startup was successful."
+echo
