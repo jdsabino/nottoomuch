@@ -19,7 +19,7 @@ case $# in 4) ;; *) exec >&2
 	echo Usage: $0 '(keep|nokeep)' imap_user imap_server mda_cmdline
 	echo
 	echo This script runs fetchmail with options to use IMAPS IDLE feature
-	echo when fetching email '(IMAPS always, IDLE when applicaple)'.
+	echo when fetching email '(IMAPS always, IDLE when applicable)'.
 	echo
 	echo fetchmail is run in background '(daemon mode)' and first 2 seconds
 	echo of logs is printed to terminal so that user can determine whether
