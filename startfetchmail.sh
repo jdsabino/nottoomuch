@@ -3,7 +3,7 @@
 # $ startfetchmail.sh $
 #
 # Created: Wed 06 Mar 2013 17:17:58 EET too
-# Last modified: Mon 06 Jan 2014 12:14:03 +0200 too
+# Last modified: Mon 13 Jan 2014 15:43:59 +0200 too
 
 # Fetchmail does not offer an option to daemonize it after first authentication
 # is successful (and report if it failed). After 2 fragile attempts to capture
@@ -92,7 +92,7 @@ chmod 700 fmconf
 
 sleep 2
 test -s $logfile || sleep 2
-rm -f $fmconf
+rm -f fmconf
 kill $logfilepid
 trap - 0
 echo
