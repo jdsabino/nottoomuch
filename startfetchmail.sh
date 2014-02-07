@@ -3,7 +3,7 @@
 # $ startfetchmail.sh $
 #
 # Created: Wed 06 Mar 2013 17:17:58 EET too
-# Last modified: Mon 13 Jan 2014 15:43:59 +0200 too
+# Last modified: Fri 07 Feb 2014 23:20:27 +0200 too
 
 # Fetchmail does not offer an option to daemonize it after first authentication
 # is successful (and report if it failed). After 2 fragile attempts to capture
@@ -14,12 +14,13 @@
 set -eu
 #set -x
 
-case $# in 4) ;; *) exec >&2
+case $# in 5) ;; *) exec >&2
 	echo
-	echo Usage: $0 '(keep|nokeep)' imap_user imap_server mda_cmdline
+	echo Usage: $0 '(143|993) (keep|nokeep)' user server mda_cmdline
 	echo
-	echo This script runs fetchmail with options to use IMAPS IDLE feature
-	echo when fetching email '(IMAPS always, IDLE when applicable)'.
+	echo This script runs fetchmail with options to use encrypted IMAP
+	echo connection when fetching email. STARTTLS is required when using
+	echo port 143. IMAP IDLE feature used when applicable.
 	echo
 	echo fetchmail is run in background '(daemon mode)' and first 2 seconds
 	echo of logs is printed to terminal so that user can determine whether
@@ -27,7 +28,7 @@ case $# in 4) ;; *) exec >&2
 	echo
 	echo Example:
 	echo
-	echo '  ' $0 keep $USER mailhost.example.org "'/usr/bin/procmail -d %T'"
+	echo '' $0 143 keep $USER mailhost.example.org "'/usr/bin/procmail -d %T'"
 	echo
 	echo The above example delivers mail from imap server to user mbox
 	echo 'in spool directory (usually /var[/spool]/mail/$USER, or $MAIL).'
@@ -36,18 +37,35 @@ case $# in 4) ;; *) exec >&2
 	exit 1
 esac
 
-case $1 in keep) keep=keep ;; nokeep) keep= ;; *) exec >&2
+case $1 in 143) ssl='--sslproto TLS1' ;; *) ssl=--ssl ;; *) exec >&2
 	echo
-	echo "$0: '$1' is not either 'keep' or 'nokeep'".
+	echo "$0: '$2' is not either '143' or '993'".
+	echo
+esac
+
+case $2 in keep) keep=keep ;; nokeep) keep= ;; *) exec >&2
+	echo
+	echo "$0: '$2' is not either 'keep' or 'nokeep'".
 	echo
 	exit 1
 esac
+shift 2
 
-imap_user=$2 imap_server=$3 mda_cmdline=$4
-shift 4
-readonly keep imap_server imap_user mda_cmdline
+imap_user=$1 imap_server=$2 mda_cmdline=$3
+shift 3
+readonly ssl keep imap_server imap_user mda_cmdline
 
 cd "$HOME"
+
+mda_cmd=`expr "$mda_cmdline" : ' *\([^ ]*\)'`
+test -s $mda_cmd || {
+	exec >&2
+	case $mda_cmd in
+	  /*)	echo "Cannot find command '$mda_cmd'" ;;
+	  *)	echo "Cannot find command '$HOME/$mda_cmd'"
+	esac
+	exit 1
+}
 
 if test -f .fetchmail.pid
 then
@@ -80,7 +98,7 @@ echo '
 set daemon 60
 set logfile '$logfile'
 
-poll '"$imap_server"' proto IMAP user "'"$imap_user"'" ssl '$keep' idle
+poll '"$imap_server"' proto IMAP user "'"$imap_user"'" '"$ssl"' '$keep' idle
   mda "'"$mda_cmdline"'"
 ' > fmconf
 chmod 700 fmconf
