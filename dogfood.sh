@@ -2,7 +2,7 @@
 # -*- mode: shell-script; sh-basic-offset: 8; tab-width: 8 -*-
 #
 # Created: Sat 06 Jul 2013 20:08:27 EEST too
-# Last modified: Sat 04 Jan 2014 14:04:44 +0200 too
+# Last modified: Thu 13 Feb 2014 18:29:54 +0200 too
 
 set -eu
 #set -x # or enter /bin/sh -x ... on command line.
@@ -162,7 +162,7 @@ cmd_dfpushtree () # push dogfood tree to df-yymm branch with new commit
 	x git --no-pager diff $new_commit dogfood
 	yesno "execute 'git push origin \$new_commit:$dfbranch'"
 	x git push origin $new_commit:$dfbranch
-	echo git branch -f $dfbranch origin/$dfbranch '?'
+	echo git branch -f $dfbranch origin/$dfbranch ';: ?'
 }
 
 cmd_tig () # tig --all
