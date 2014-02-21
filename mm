@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Thu 20 Feb 2014 19:14:04 +0200 too
+# Last Modified: Fri 21 Feb 2014 18:25:43 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -18,6 +18,8 @@ case ~ in '~') exec >&2; echo
 esac
 
 warn () { echo "$@"; } >&2
+
+x () { echo "$@" >&2; "$@"; }
 
 cmd_source () # Display source of given $0 command (or function).
 {
@@ -50,10 +52,21 @@ set_d0 ()
 
 cmd_mua () # Launch emacs as mail user agent.
 {
+	case ${1-} in -y) ;; *)
+		if ps x | grep 'emacs[ ].*[ ]notmuch'
+		then    echo
+			echo '^^^ notmuch emacs mua already running ? ^^^'
+			echo
+			echo "to run another, add '-y' to the command line"
+			echo
+			exit 0
+		fi
+	esac
 	case ${DISPLAY-} in '')
 		printf '\033[8;38;108t'
 		exec emacs -f notmuch
 	esac
+	set -x
 	exec nohup setsid emacs -g 108x38 -f notmuch >/dev/null
 	# the command above works best on linux interactive terminal
 }
@@ -64,7 +77,7 @@ mbox2md5mda ()
 	tmpfile=`cd $HOME/mail; LC_ALL=C exec perl -e '
 		mkdir q"wip" unless -d q"wip";
 		system q"mktemp", (sprintf q"wip/mbox-%x,XXXX", time)'`
-	$d0/mbox-to-mda.sh --movemail $HOME/mail/$tmpfile $MAIL \
+	x $d0/mbox-to-mda.sh --movemail $HOME/mail/$tmpfile $MAIL \
 		$d0/md5mda.sh --cd $HOME/mail received wip log ||
 		: ::: mbox-to-mda.sh exited nonzero ::: :
 	test -s $HOME/mail/$tmpfile || rm $HOME/mail/$tmpfile || :
@@ -80,7 +93,7 @@ cmd_new () # Import new mail.
 	;;	*) warn "Suspicious '$MAIL' path. Ignored."
 	esac
 	set -x
-	time notmuch new --verbose | cat #tee -a $HOME/mail/log/new-$ymdhms.log
+	time notmuch new --verbose | tee -a $HOME/mail/log/new-$ymdhms.log
 }
 
 cmd_frm () # Run frm-md5mdalog.pl.

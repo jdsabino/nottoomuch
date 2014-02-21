@@ -42,7 +42,7 @@ case $# in 5) ;; *) exec >&2
 	echo '    Mails are not removed from imap server.'
 	echo
 	echo ' ' $0 143 nokeep $USER mailhost.example.org \\
-        echo "          ~/'nottoomuch/md5mda.sh --cd mail received wip log'"
+        echo "          './nottoomuch/md5mda.sh --cd mail received wip log'"
 	echo
 	echo '    Deliver mail from imap server (STARTTLS required) to'
 	echo '    separate mails in $HOME/mail/received/??/ directories.'
