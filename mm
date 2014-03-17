@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Sat 01 Mar 2014 13:41:15 +0200 too
+# Last Modified: Mon 17 Mar 2014 21:20:43 +0200 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -18,6 +18,9 @@ case ~ in '~') exec >&2; echo
 esac
 
 warn () { echo "$@"; } >&2
+die () { echo "$@"; exit 1; } >&2
+
+usage () { echo "Usage: $0 $cmd" "$@"; exit 1; } >&2
 
 x () { echo "$@" >&2; "$@"; }
 
@@ -47,7 +50,16 @@ set_d0 ()
 		dln=${ln%/*}; case $dln in $ln) dln=.; esac
 		case $dln in /*) d0=$dln ;; *) d0=$d0/$dln; esac
 	fi
-	case $d0 in /*) ;; *) d0=`cd "$dn0"; pwd` ;; esac
+	case $d0 in *["$IFS"]*) die "'$d0' contains whitespace!"
+	;; /*) ;; *) d0=`cd "$d0"; pwd`
+	esac
+}
+
+try_canon_d0 () {
+	case $d0 in */../*|*/./*)
+		_xd0=`readlink -f $d0 2>/dev/null || :`
+		case $_xd0 in /*) d0=$_xd0; esac
+	esac
 }
 
 cmd_mua () # Launch emacs as mail user agent.
@@ -107,6 +119,21 @@ cmd_frm () # Run frm-md5mdalog.pl.
 	exec $d0/frm-md5mdalog.pl "$@"
 }
 
+cmd_starfemmda5 () # startfetchmail.sh using md5mda.sh mda
+{
+	case $# in 4) ;; *)
+		usage '(143|993)' '(keep|nokeep)' user server
+	esac
+	set_d0
+	try_canon_d0
+	cd $HOME
+	case $d0 in $PWD/*) d0=${d0#$PWD/}; esac
+	set -x
+	exec $d0/startfetchmail.sh $@ \
+		"$d0/md5mda.sh --cd mail received wip log"
+}
+
+
 # --
 
 case ${1-} in -x) set -x; shift; esac
@@ -120,7 +147,7 @@ case ${1-} in '')
 	echo $bn commands available:
 	echo
 	sed -n '/^cmd_[a-z0-9_]/ { s/cmd_/ /; s/ () [ -#]*/                   /
-			s/$0/'"$bn"'/g; s/\(.\{13\}\) */\1/p; }' $0
+			s/$0/'"$bn"'/g; s/\(.\{14\}\) */\1/p; }' $0
 	echo
 	echo Commands may be abbreviated until ambiguous.
 	echo
@@ -142,9 +169,10 @@ do
 	esac
 done
 
-case $cc in '') echo $bn: $cm -- command not found.; exit 1
+case $cc in '') echo ${0##*/}: $cm -- command not found.; exit 1
 esac
-case $cp in '') ;; *) echo $bn: $cm -- ambiguous command: matches $cc; exit 1
+case $cp in '') ;; *)
+	echo ${0##*/}: $cm -- ambiguous command: matches $cc; exit 1
 esac
 
 unset cc cp cm
