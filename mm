@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Tue 01 Apr 2014 19:57:34 +0300 too
+# Last Modified: Fri 11 Jul 2014 10:36:31 +0300 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -92,6 +92,10 @@ cmd_mua () # Launch emacs as mail user agent.
 	esac
 	case ${DISPLAY-} in '')
 		#printf '\033[8;38;108t'
+		# the line below matches *my* N9 Fingerterm settings...
+	        case $TERM in xterm) case `exec stty -a` in (*'rows 25; columns 85;'*)
+			exec emacs --eval "(setq frame-background-mode 'dark)" -f notmuch
+		esac; esac
 		exec emacs -f notmuch
 	esac
 	set -x
@@ -136,9 +140,9 @@ cmd_frm () # Run frm-md5mdalog.pl.
 	case $# in 1) usage -D match-re ;; esac
 	shift
 	echo; echo
-	$d0/frm-md5mdalog.pl -q "$@"
+	$d0/frm-md5mdalog.pl "$@"
 	yesno "Delete the messages listed above"
-	$d0/frm-md5mdalog.pl -qf "$@" | xargs rm -fv
+	$d0/frm-md5mdalog.pl -f "$@" | xargs rm -fv
 }
 
 cmd_startfemmda5 () # startfetchmail.sh using md5mda.sh mda
