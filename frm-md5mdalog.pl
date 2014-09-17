@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Created: Fri Aug 19 16:53:45 2011 +0300 too
-# Last Modified: Fri 11 Jul 2014 10:31:12 +0300 too
+# Last Modified: Wed 17 Sep 2014 12:51:13 +0300 too
 
 # This program examines the log files md5mda.sh has written to
 # $HOME/mail/log directory (XXX hardcoded internally to this script)
@@ -31,9 +31,10 @@ binmode STDOUT, ':utf8';
 
 sub usage () { die "Usage: $0 [-uvdf] [re...]\n"; }
 
-my ($updateloc, $filenames, $filesonly, $showdels) = (0, 0, 0, 0);
+my ($updateloc, $filenames, $filesonly, $showdels, $fromnew) = (0, 0, 0, 0, 0);
 if (@ARGV > 0 and ord($ARGV[0]) == ord('-')) {
     my $arg = $ARGV[0];
+    $fromnew = $1 if $arg =~ s/^-\K(\d+)$//;
     $showdels = 1 if $arg =~ s/-\w*\Kd//;
     $updateloc = 1 if $arg =~ s/-\w*\Ku//;
     $filenames = 1 if $arg =~ s/-\w*\Kv//;
@@ -122,13 +123,13 @@ sub get_next_hdr()
 sub decode_data() {
     local $_ = $1;
     if (s/^utf-8\?(q|b)\?//i) {
-	return (lc $1 eq 'q')? decode_qp($_): decode_base64($_);
+	return (lc $1 eq 'q')? decode_qp(tr/_/ /r): decode_base64($_);
     }
     if (s/^([\w-]+)\?(q|b)\?//i) {
 	my $t = lc $2;
 	my $o = find_encoding($1);
 	if (ref $o) {
-	    my $s = ($t eq 'q')? decode_qp($_): decode_base64($_);
+	    my $s = ($t eq 'q')? decode_qp(tr/_/ /r): decode_base64($_);
 	    # Encode(3p) is fuzzy whether encode_utf8 is needed...
 	    return encode_utf8($o->decode($s));
 	}
@@ -138,6 +139,7 @@ sub decode_data() {
 
 my ($mails, $smails, $odate) = (0, 0, '');
 
+my %lastfns;
 sub mailfrm($)
 {
     my ($sbj, $frm, $dte, $spam);
@@ -158,7 +160,13 @@ sub mailfrm($)
     if ($spam) { $smails++; }
     else {
 	# could split to $1, $2 & $3...
+	$frm =~ s/\?=\s+=\?/\?==\?/g;
 	$frm =~ s/=\?([^?]+\?.\?.+?)\?=/decode_data/ge;
+	unless ($filesonly) {
+	    $_ = $_[0]; s|.*/||;
+	    $frm="!$frm" if defined $lastfns{$_};
+	}
+	$sbj =~ s/\?=\s+=\?/\?==\?/g;
 	$sbj =~ s/=\?([^?]+\?.\?.+?)\?=/decode_data/ge;
 	_utf8_on($frm); _utf8_on($sbj); # for print widths...
 	my $line = sprintf '%-*.*s  %-.*s', $fw, $fw, $frm, $sw, $sbj;
@@ -172,6 +180,37 @@ sub mailfrm($)
     $mails += 1;
 }
 
+# read filenames of last mails imported, from new-* files, to know whether
+# taken by notmuch already (XXX 20140821 is this consistent XXX)
+
+my @_i = ( 1 );
+while (<log/new-*>) {
+    $_i[$_i[0]++] = $_;
+    $_i[0] = 1 if $_i[0] > ($fromnew || 3);
+}
+
+shift @_i;
+foreach (@_i) {
+    open L, '<', $_ or die "$_: $!\n";
+    while (<L>) {
+	if ($fromnew) {
+	    # XXX so much duplicate w/ loop below
+	    /\s(\/\S+)\s+$/ || next;
+	    open I, '<', "$1" or do {
+		print "    ** $1: deleted **\n" if $showdels; next;
+	    };
+	    my $f = $1;
+	    mailfrm $1;
+	    close I;
+	}
+	else {
+	    $lastfns{$1} = 1 if /\/([a-z0-9]{9,})$/;
+	}
+    }
+    close L;
+}
+undef @_i;
+exit if $fromnew;
 
 my $omio = $mio;
 my ($cmio, $ltime);
