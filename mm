@@ -3,7 +3,7 @@
 # mm -- more mail -- a notmuch (mail) wrapper
 
 # Created: Tue 23 Aug 2011 18:03:55 EEST (+0300) too
-# Last Modified: Tue 24 Feb 2015 09:53:56 +0200 too
+# Last Modified: Mon 24 Aug 2015 20:15:28 +0300 too
 
 # For everything in this to work, symlink this from it's repository
 # working copy position to a directory in PATH.
@@ -61,18 +61,19 @@ set_d0 ()
 	d0=${0%/*}; case $d0 in $0) d0=.; esac
 	if test -h "$0"
 	then	# symlink. we can tolerate one level, as readlink(1)
-		set_ln_of_file "$0"	#  may not be always available.
+		set_ln_of_file "$0"	#  \\ may not be always available.
 		dln=${ln%/*}; case $dln in $ln) dln=.; esac
 		case $dln in /*) d0=$dln ;; *) d0=$d0/$dln; esac
 	fi
 	case $d0 in *["$IFS"]*) die "'$d0' contains whitespace!"
 	;; /*) ;; *) d0=`cd "$d0"; pwd`
 	esac
+	set_d0 () { :; }
 }
 
 try_canon_d0 () {
 	case $d0 in */../*|*/./*)
-		_xd0=`readlink -f $d0 2>/dev/null || :`
+		_xd0=`exec readlink -f $d0 2>/dev/null` || :
 		case $_xd0 in /*) d0=$_xd0; esac
 	esac
 }
@@ -136,13 +137,15 @@ cmd_new () # Import new mail.
 cmd_frm () # Run frm-md5mdalog.pl.
 {
 	set_d0
-	case ${1-} in -D) ;; *) exec $d0/frm-md5mdalog.pl "$@" ;; esac
-	case $# in 1) usage -D match-re ;; esac
+	case ${1-x} in '') ;; *) exec $d0/frm-md5mdalog.pl "$@" ;; esac
+	case $# in 1) usage "''" match-re ;; esac
 	shift
-	echo; echo
-	$d0/frm-md5mdalog.pl "$@"
+	echo
+	tf=`exec mktemp`; trap "rm -f $tf" 0 INT TERM HUP QUIT
+	$d0/frm-md5mdalog.pl -qvw "$@" | tee $tf |\
+		grep -v -e '^   ' -e '^$' || exit 0
 	yesno "Delete the messages listed above"
-	$d0/frm-md5mdalog.pl -f "$@" | xargs rm -fv
+	rm -fv `exec grep '/.*/.*/' $tf`
 }
 
 cmd_startfemmda5 () # startfetchmail.sh using md5mda.sh mda
@@ -163,7 +166,7 @@ cmd_delete () # remove emails with tag deleted
 {
 	case $#${1-}
 	  in '1!')
-		x_eval 'notmuch search --output=files tag:deleted | xargs rm'
+		x_eval 'notmuch search --output=files tag:deleted | xargs rm -v'
 		exit
 	  ;; '1h')
 		x notmuch search tag:deleted
@@ -178,7 +181,7 @@ cmd_delete () # remove emails with tag deleted
 
 # --
 
-case ${1-} in -x) set -x; shift; esac
+case ${1-} in -x) nosetx=false; shift ;; *) nosetx=true ;; esac
 
 case ${1-} in '')
 	#bn=`exec basename "$0"`
@@ -219,7 +222,7 @@ esac
 
 unset cc cp cm
 #set -x
-
+$nosetx || set -x
 cmd_$cmd ${1+"$@"}
 exit
 
